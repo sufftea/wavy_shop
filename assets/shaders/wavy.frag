@@ -9,7 +9,8 @@ precision mediump float;
 uniform vec2 resolution;
 uniform float t;
 uniform float selectionOffset;
-uniform float selectionDist;
+uniform float selectionAnim;
+uniform float yOffset;
 uniform float prevOffset;
 uniform float targetOffset;
 uniform sampler2D tex;
@@ -18,7 +19,7 @@ uniform sampler2D tex;
 out vec4 fragColor;
 
 // Magic colors
-const vec3 mTransparent = vec3(52, 143, 0) / 255;
+const vec3 mBlackWhite = vec3(0, 0, 0) / 255;
 
 //	Simplex 3D Noise 
 //	by Ian McEwan, Ashima Arts
@@ -95,36 +96,12 @@ float snoise(vec3 v){
                                 dot(p2,x2), dot(p3,x3) ) );
 }
 
-// (f(x), strength)
-// strength - resistance to waviness
-vec2 computeBoundary(vec2 norm) {
+float computeBoundary(vec2 norm) {
   norm.x -= selectionOffset;
 
-  float strength = exp(-pow(abs(norm.x * 16), 2)) * mix(0.9, 0.1, selectionDist);
+  float value = - pow(abs(norm.x), 3);
 
-  float value = - pow(abs(norm.x), 2.5) + mix(0.7, 0.6, selectionDist);
-  value += exp(-pow(
-    abs(norm.x * mix(12, 4, selectionDist)), 
-    mix(4, 2, selectionDist)
-  )) / mix(6, 32, selectionDist);
-
-  return vec2(value, strength);
-}
-
-vec2 waveOffset(vec2 norm, vec2 noise) {
-  vec2 boundary = computeBoundary(norm);
-  float boundaryValue = boundary.x;
-  float strength = boundary.y;
-
-  float boundaryDist = abs(norm.y - boundaryValue);
-
-  boundaryDist = exp(- boundaryDist * boundaryDist * 64);
-  vec2 offset = vec2(
-    noise.x * (boundaryDist / mix(32, 1024, strength)),
-    noise.y * (boundaryDist / mix(32, 1024, strength))
-  );
-
-  return offset;
+  return value;
 }
 
 float f1() {
@@ -135,31 +112,47 @@ float f1() {
   vec2 n0 = vec2(
     snoise(vec3(pos0.x, pos0.y, t)),
     snoise(- vec3(pos0.x , pos0.y, t))
-  );
-  vec2 offset0 = waveOffset(norm, n0);
+  ) / 48;
   
   vec2 pos1 = pos / 256;
   vec2 n1 = vec2(
     snoise(vec3(pos1.x, pos1.y, t)),
     snoise(- vec3(pos1.x , pos1.y, t))
-  );
-  vec2 offset1 = waveOffset(norm, n1);
+  ) / 48;
 
-
-  vec2 offset = offset0 + offset1 * 1.5;
+  vec2 offset = n0 + n1;
+  offset *= -exp(-10*norm.x*norm.x) + 1;
 
   vec2 posRes = norm + offset;
-  vec2 boundary = computeBoundary(posRes);
-  float boundaryValue = boundary.x;
+  float boundary = computeBoundary(posRes);
 
-  return boundar
+  float y = 1 - posRes.y;
+  y = exp(y);
 
-  float res = 0;
-  if (posRes.y > boundaryValue) {
-    res = 1;
-  }
+  return boundary + y;
+}
 
-  return res;
+float f2(float offset) {
+  vec2 pos = FlutterFragCoord().xy;
+  vec2 norm = pos / resolution.xy;
+
+
+  float x = norm.x - offset;
+  float y = norm.y - yOffset;
+
+  y += 0.02 * (-pow(selectionAnim*2-1, 2) + 1);
+
+  float z = exp( 
+    256 * (-x*x - y*y)
+  );
+
+  return z;
+}
+
+float smoothMax(float a, float b) {
+  const float k = 5;
+  float res = exp2(k * a) + exp2(k * b);
+  return log2(res) / k;
 }
 
 
@@ -194,13 +187,23 @@ void main() {
     st
   );
   
-  float mask = f1();
+  float v1 = f1() * 0.75;
+  const float rippleCoef = 2.3;
+  float v2 = f2(prevOffset) * (1-selectionAnim) * rippleCoef;
+  float v3 = f2(targetOffset) * selectionAnim * rippleCoef;
+
+  float value = smoothMax(v1, v2);
+  value = smoothMax(value, v3);
+
+  float mask = 0;
+  if (value < 1) {
+    mask = 1;
+  }
 
   fragColor = col * mask;
 
-  // float transparent = colorDiff(col.xyz, mTransparent);
-  // if (transparent < 0.01) {
-  //   fragColor = vec4(0);
-  // }
+  float blackWhite = colorDiff(col.xyz, mBlackWhite);
+  if (blackWhite < 0.01 && mask == 0) {
+    fragColor = vec4(1, 1, 1, 1);
+  }
 }
-

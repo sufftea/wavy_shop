@@ -1,4 +1,3 @@
-import 'dart:math';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
@@ -6,6 +5,8 @@ import 'package:flutter_shaders/flutter_shaders.dart';
 import 'package:unicorns/utils.dart';
 
 const buttonSize = 48.0;
+
+const blackWhite = Colors.black;
 
 void main() {
   runApp(const MainApp());
@@ -21,6 +22,8 @@ class MainApp extends StatefulWidget {
 class _MainAppState extends State<MainApp> with TickerProviderStateMixin {
   final selectedButton = ValueNotifier<int>(0);
 
+  final categoryListScrollController = ScrollController();
+
   late final timeAnimController = AnimationController(
     vsync: this,
     duration: const Duration(days: 1),
@@ -28,6 +31,7 @@ class _MainAppState extends State<MainApp> with TickerProviderStateMixin {
 
   double oldOffset = 0;
   double targetOffset = 0;
+  double yOffset = 0;
   double get currOffset {
     return ui.lerpDouble(
       oldOffset,
@@ -62,14 +66,34 @@ class _MainAppState extends State<MainApp> with TickerProviderStateMixin {
     WidgetsBinding.instance.addPostFrameCallback((timeStamp) async {
       focusButton(0);
     });
+
+    categoryListScrollController.addListener(onCategoryListScroll);
+  }
+
+  void onCategoryListScroll() {
+    final stackContext = stackKey.currentContext!;
+
+    final center = buttonKeys[selectedButton.value]
+        .getPaintBounds(stackContext.findRenderObject())!
+        .center;
+
+    final offset = center.dx / stackContext.size!.width;
+    oldOffset = offset;
+    targetOffset = offset;
   }
 
   void focusButton(int selectedButton) {
-    final center = buttonKeys[selectedButton].globalPaintBounds!.center;
+    final stackContext = stackKey.currentContext!;
 
-    final offset = center.dx / context.size!.width;
+    final center = buttonKeys[selectedButton]
+        .getPaintBounds(stackContext.findRenderObject())!
+        .center;
+
+    final offset = center.dx / stackContext.size!.width;
     oldOffset = currOffset;
     targetOffset = offset;
+
+    yOffset = center.dy / stackContext.size!.height;
 
     offsetAnimController.forward(from: 0);
   }
@@ -103,8 +127,7 @@ class _MainAppState extends State<MainApp> with TickerProviderStateMixin {
                         builder: (context, child) {
                           return AnimatedSampler(
                             (image, size, canvas) {
-                              final double dist =
-                                  -pow(offsetAnim.value * 2 - 1, 2) + 1;
+                              final double dist = offsetAnim.value;
                               final t = timeAnimController.value;
                               final offset = currOffset;
 
@@ -115,8 +138,9 @@ class _MainAppState extends State<MainApp> with TickerProviderStateMixin {
                                 ..setFloat(i++, t * 50000)
                                 ..setFloat(i++, offset)
                                 ..setFloat(i++, dist)
-                                // ..setFloat(i++, dist)
-                                // ..setFloat(i++, dist)
+                                ..setFloat(i++, yOffset)
+                                ..setFloat(i++, oldOffset)
+                                ..setFloat(i++, targetOffset)
                                 ..setImageSampler(0, image);
 
                               canvas.drawRect(
@@ -126,6 +150,7 @@ class _MainAppState extends State<MainApp> with TickerProviderStateMixin {
                             },
                             child: Container(
                               color: Colors.white,
+                              child: buildContent(),
                             ),
                           );
                         },
@@ -133,7 +158,7 @@ class _MainAppState extends State<MainApp> with TickerProviderStateMixin {
                     },
                     assetKey: 'assets/shaders/wavy.frag',
                   ),
-                  buildContent(),
+                  buildButtons(),
                 ],
               ),
             ),
@@ -144,40 +169,49 @@ class _MainAppState extends State<MainApp> with TickerProviderStateMixin {
   }
 
   Widget buildContent() {
+    return const Column(
+      mainAxisAlignment: MainAxisAlignment.end,
+      children: [
+        Padding(
+          padding: EdgeInsets.only(right: 32, left: 32, bottom: 120),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Text(
+                'Collections',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: blackWhite,
+                ),
+              ),
+              Spacer(),
+              Text(
+                'All',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: blackWhite,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget buildButtons() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         const Spacer(),
-        // const Padding(
-        //   padding: EdgeInsets.symmetric(horizontal: 32),
-        //   child: Row(
-        //     crossAxisAlignment: CrossAxisAlignment.center,
-        //     children: [
-        //       Text(
-        //         'Collections',
-        //         style: TextStyle(
-        //           fontSize: 24,
-        //           fontWeight: FontWeight.bold,
-        //           color: _MagicColors.blackWhite,
-        //         ),
-        //       ),
-        //       Spacer(),
-        //       Text(
-        //         'All',
-        //         style: TextStyle(
-        //           fontSize: 16,
-        //           fontWeight: FontWeight.bold,
-        //           color: _MagicColors.blackWhite,
-        //         ),
-        //       ),
-        //     ],
-        //   ),
-        // ),
         const SizedBox(height: 24),
         SizedBox(
           height: buttonSize + 2,
           child: SingleChildScrollView(
             scrollDirection: Axis.horizontal,
+            controller: categoryListScrollController,
             child: ValueListenableBuilder(
               valueListenable: selectedButton,
               builder: (context, value, child) {
@@ -186,31 +220,10 @@ class _MainAppState extends State<MainApp> with TickerProviderStateMixin {
                   children: [
                     const SizedBox(width: 32),
                     for (final (i, key) in buttonKeys.enumerate()) ...[
-                      SizedBox(
-                        key: key,
-                        width: buttonSize,
-                        height: buttonSize,
-                        child: FilledButton(
-                          onPressed: () {
-                            selectedButton.value = i;
-                          },
-                          style: ButtonStyle(
-                            padding: const MaterialStatePropertyAll(EdgeInsets.zero),
-                            shape: MaterialStatePropertyAll(
-                              ContinuousRectangleBorder(
-                                borderRadius:
-                                    BorderRadius.circular(buttonSize / 2),
-                              ),
-                            ),
-                          ),
-                          child: const Icon(
-                            Icons.add_shopping_cart_rounded,
-                            // size: buttonSize / 2,
-                          ),
-                        ),
-                      ),
+                      buildButton(key, i, value),
                       if (i < buttonKeys.length - 1) const SizedBox(width: 64),
-                    ]
+                    ],
+                    const SizedBox(width: 32),
                   ],
                 );
               },
@@ -219,6 +232,45 @@ class _MainAppState extends State<MainApp> with TickerProviderStateMixin {
         ),
         const SizedBox(height: 48),
       ],
+    );
+  }
+
+  Widget buildButton(GlobalKey<State<StatefulWidget>> key, int i, int value) {
+    return SizedBox(
+      key: key,
+      width: buttonSize,
+      height: buttonSize,
+      child: FilledButton(
+        onPressed: () {
+          selectedButton.value = i;
+        },
+        statesController: MaterialStatesController({
+          if (i == value) MaterialState.selected,
+        }),
+        style: ButtonStyle(
+          animationDuration: offsetAnimController.duration,
+          padding: const MaterialStatePropertyAll(EdgeInsets.zero),
+          shape: MaterialStateProperty.resolveWith((states) {
+            if (states.contains(MaterialState.selected)) {
+              return const CircleBorder();
+            }
+            return const CircleBorder(
+              side: BorderSide(color: Colors.black, width: 0.5),
+            );
+          }),
+          foregroundColor: MaterialStateProperty.resolveWith((states) {
+            if (states.contains(MaterialState.selected)) {
+              return Colors.white;
+            }
+            return Colors.black;
+          }),
+          backgroundColor: const MaterialStatePropertyAll(Colors.transparent),
+        ),
+        child: const Icon(
+          Icons.add_shopping_cart_rounded,
+          // size: buttonSize / 2,
+        ),
+      ),
     );
   }
 }
