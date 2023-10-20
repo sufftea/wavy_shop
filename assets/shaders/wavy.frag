@@ -97,9 +97,13 @@ float snoise(vec3 v){
 }
 
 float computeBoundary(vec2 norm) {
-  norm.x -= selectionOffset;
+  float value = min(
+    norm.x * (1/(selectionOffset+0.01)) * 0.25 - 0.15,
+    -(norm.x - 1) * (1/(1-selectionOffset + 0.01)) * 0.25 - 0.15
+  );
 
-  float value = - pow(abs(norm.x), 3);
+  value += exp(-pow((norm.x - selectionOffset) * 8, 2)) * 1/16 * (1-sin(selectionAnim * PI));
+
 
   return value;
 }
@@ -121,15 +125,11 @@ float f1() {
   ) / 48;
 
   vec2 offset = n0 + n1;
-  offset *= -exp(-10*norm.x*norm.x) + 1;
 
   vec2 posRes = norm + offset;
-  float boundary = computeBoundary(posRes);
+  float boundary = computeBoundary(norm);
 
-  float y = 1 - posRes.y;
-  y = exp(y);
-
-  return boundary + y;
+  return boundary - posRes.y + 1;
 }
 
 float f2(float offset) {
@@ -137,13 +137,13 @@ float f2(float offset) {
   vec2 norm = pos / resolution.xy;
 
 
-  float x = norm.x - offset;
-  float y = norm.y - yOffset;
+  float x = pos.x - offset * resolution.x;
+  float y = pos.y - yOffset * resolution.y;
 
-  y += 0.02 * (-pow(selectionAnim*2-1, 2) + 1);
+  y += (-pow(selectionAnim*2-1, 2) + 1) * resolution.y * 0.05;
 
   float z = exp( 
-    256 * (-x*x - y*y)
+    (-x*x - y*y) * 0.0012
   );
 
   return z;
@@ -155,30 +155,6 @@ float smoothMax(float a, float b) {
   return log2(res) / k;
 }
 
-
-float inverseLerp(float start, float end, float value) {
-  if (start == end) {
-      return float(0);
-  }
-  return (value - start) / (end - start);
-}
-
-float dist(float a, float b) {
-  return inverseLerp(
-    a, 
-    a < b ? a + 1 : a - 1, 
-    b
-  );
-}
-
-float colorDiff(vec3 col, vec3 match) {
-  float dx = dist(col.x, match.x);
-  float dy = dist(col.y, match.y);
-  float dz = dist(col.z, match.z);
-
-  return (dx + dy + dz) / 3;
-}
-
 void main() {
   vec2 st = FlutterFragCoord().xy / resolution.xy;
 
@@ -187,7 +163,7 @@ void main() {
     st
   );
   
-  float v1 = f1() * 0.75;
+  float v1 = f1() * 2.65;
   const float rippleCoef = 2.3;
   float v2 = f2(prevOffset) * (1-selectionAnim) * rippleCoef;
   float v3 = f2(targetOffset) * selectionAnim * rippleCoef;
@@ -195,15 +171,19 @@ void main() {
   float value = smoothMax(v1, v2);
   value = smoothMax(value, v3);
 
-  float mask = 0;
-  if (value < 1) {
-    mask = 1;
-  }
+  float mask = smoothstep(1, 0.99, value);
 
   fragColor = col * mask;
 
-  float blackWhite = colorDiff(col.xyz, mBlackWhite);
-  if (blackWhite < 0.01 && mask == 0) {
-    fragColor = vec4(1, 1, 1, 1);
+  float blackWhite = distance(col.xyz, mBlackWhite);
+  if (mask == 0) {
+    fragColor = 1-blackWhite.xxxx;
+  }
+  
+  if (value > 1) {
+    float shadow = smoothstep(1.05, 1, value);
+
+    fragColor.w = max(fragColor.w, shadow * 0.1);
+    fragColor.xyz -= shadow*0.1;
   }
 }
