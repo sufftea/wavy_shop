@@ -35,41 +35,41 @@ class TabContent {
   final Color color;
 }
 
-const tabContents = <TabContent>[
+final tabContents = <TabContent>[
   TabContent(
-    headerImagePath: 'assets/images/night_sky_header.jpg',
+    headerImagePath: 'assets/images/night_sky_header.jpeg',
     headerName: 'PILLOW CUSHION',
     bannerTitle: 'Read our story',
     bannerImagePath: 'night_sky_banner.png',
     buttonName: 'Pillow',
     buttonIcon: 'assets/icons/star_icon.svg',
-    color: Color.fromARGB(255, 50, 40, 78),
+    color: Colors.blue.shade800,
   ),
   TabContent(
-    headerImagePath: 'assets/images/rainbows_header.jpg',
+    headerImagePath: 'assets/images/unicorns_header.jpeg',
     headerName: 'BABY COLLECTION',
     bannerTitle: 'Special film BT21 baby collection',
     bannerImagePath: 'unicorns_banner.png',
     buttonName: 'Baby',
     buttonIcon: 'assets/icons/dog_icon.svg',
-    color: Color.fromARGB(255, 178, 126, 185),
+    color: Colors.pink.shade200,
   ),
-  TabContent(
-    headerImagePath: 'assets/images/night_sky_header.jpg',
+  const TabContent(
+    headerImagePath: 'assets/images/forest_header.jpeg',
     headerName: 'PILLOW CUSHION',
     bannerTitle: 'Read our story',
     bannerImagePath: 'night_sky_banner.png',
     buttonName: 'Flat fur',
     buttonIcon: 'assets/icons/ghost_icon.svg',
-    color: Color.fromARGB(255, 50, 40, 78),
+    color: Colors.lightGreen,
   ),
-  TabContent(
-    headerImagePath: 'assets/images/rainbows_header.jpg',
+  const TabContent(
+    headerImagePath: 'assets/images/sunflowers_header.jpeg',
     headerName: 'BABY COLLECTION',
     bannerTitle: 'Special film BT21 baby collection',
     bannerImagePath: 'unicorns_banner.png',
     buttonName: 'Flat fur',
     buttonIcon: 'assets/icons/ship_icon.svg',
-    color: Color.fromARGB(255, 178, 126, 185),
+    color: Colors.yellowAccent,
   ),
 ];

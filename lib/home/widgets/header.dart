@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_shaders/flutter_shaders.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:unicorns/home/providers.dart';
 import 'package:unicorns/utils.dart';
 
@@ -175,40 +174,45 @@ class _HeaderState extends ConsumerState<Header> with TickerProviderStateMixin {
   }
 
   Widget buildMaskedContent() {
-    return Container(
-      color: Colors.white,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 32),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Text(
-                  'Collections',
-                  style: GoogleFonts.signika(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: blackWhite,
+    return Consumer(builder: (context, ref, child) {
+      final s = ref.watch(tabContentProvider);
+
+      return AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
+        color: Color.lerp(Colors.white, s.color, 0.1),
+        child: const Column(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 32),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Text(
+                    'Collections',
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: blackWhite,
+                    ),
                   ),
-                ),
-                const Spacer(),
-                Text(
-                  'All',
-                  style: GoogleFonts.signika(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: blackWhite,
+                  Spacer(),
+                  Text(
+                    'All',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: blackWhite,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-          const SizedBox(height: 110),
-        ],
-      ),
-    );
+            SizedBox(height: 110),
+          ],
+        ),
+      );
+    });
   }
 
   Widget buildContent() {
@@ -226,7 +230,7 @@ class _HeaderState extends ConsumerState<Header> with TickerProviderStateMixin {
 
             return Text(
               content.headerName,
-              style: GoogleFonts.signika(
+              style: const TextStyle(
                 fontSize: 24,
                 color: Colors.white,
                 fontWeight: FontWeight.bold,
@@ -251,15 +255,14 @@ class _HeaderState extends ConsumerState<Header> with TickerProviderStateMixin {
               ),
             );
             return TextField(
-              // textAlign: TextAlign.start,
-              style: GoogleFonts.signika(fontSize: 20, color: Colors.white),
+              style: const TextStyle(fontSize: 20, color: Colors.white),
               decoration: InputDecoration(
-                contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 16),
-                hintStyle: GoogleFonts.signika(color: Colors.white),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+                hintStyle: const TextStyle(color: Colors.white),
                 hintText: 'Search',
                 filled: true,
-                fillColor: content.color.withOpacity(0.8),
+                fillColor: Color.lerp(Colors.black, content.color, 0.7)!
+                    .withOpacity(0.8),
                 suffixIcon: const Icon(Icons.search),
                 suffixIconColor: Colors.white,
                 constraints: const BoxConstraints.tightFor(height: height),
@@ -327,17 +330,18 @@ class _HeaderState extends ConsumerState<Header> with TickerProviderStateMixin {
                   return const CircleBorder();
                 }
                 return const CircleBorder(
-                  side: BorderSide(color: Colors.black, width: 0.5),
+                  side: BorderSide(color: Colors.black, width: 1),
                 );
               }),
               foregroundColor: MaterialStateProperty.resolveWith((states) {
-                if (states.contains(MaterialState.selected)) {
-                  return Colors.white;
-                }
                 return Colors.black;
               }),
-              backgroundColor:
-                  const MaterialStatePropertyAll(Colors.transparent),
+              backgroundColor: MaterialStateProperty.resolveWith((states) {
+                if (states.contains(MaterialState.selected)) {
+                  return Colors.white.withOpacity(0.4);
+                }
+                return Colors.transparent;
+              }),
             ),
             child: Padding(
               padding: const EdgeInsets.all(8),
@@ -355,7 +359,7 @@ class _HeaderState extends ConsumerState<Header> with TickerProviderStateMixin {
         const SizedBox(height: 8),
         Text(
           content.buttonName,
-          style: GoogleFonts.signika(
+          style: const TextStyle(
             fontWeight: FontWeight.bold,
           ),
         ),

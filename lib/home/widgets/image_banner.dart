@@ -48,6 +48,8 @@ class ImageBanner extends StatelessWidget {
                       child: Image.asset(
                         content.headerImagePath,
                         fit: BoxFit.cover,
+                        colorBlendMode: BlendMode.multiply,
+                        color: Colors.black.withOpacity(0.4),
                       ),
                     ),
                     Padding(
